@@ -1,51 +1,45 @@
 //Imports
 const express = require('express');
 const app = express();
-const cors = require('cors');
-const bodyparser = require('body-parser');
-const { json } = require('body-parser');
+// const cors = require('cors');
+// const bodyparser = require('body-parser');
+// const { json } = require('body-parser');
 const passport = require('passport');
-
-//Passport Setup Config
-require('./passport')
 
 //Dot ENV Configuration
 require('dotenv').config()
 
 
-//Middlewares
-app.use(passport.initialize())
-app.use(bodyparser.urlencoded({ extended: true }))
-app.use(bodyparser.json())
+const GoogleStrategy = require('passport-google-oauth20').Strategy;
+
+//Middleware
+
+app.use(passport.initialize()) // init passport on every route call
+
+const authUser = (request, accessToken, refreshToken, profile, done) => {
+    return done(null, profile);
+}
+
+//Use "GoogleStrategy" as the Authentication Strategy
+passport.use(new GoogleStrategy({
+    clientID: process.env.OAUTH_CLIENT_ID,
+    clientSecret: process.env.OAUTH_CLIENT_SECRET,
+    callbackURL: "http://localhost:3000/google/callback",
+    passReqToCallback: true
+}, authUser));
 
 
-//Endpoints
-app.get('/', (req, res, next) => {
-    res.status(200), json({
-        'ok': true,
-        'message': 'Welcome to OAuth Demonstration.'
+//Start the NODE JS server
+app.listen(process.env.PORT, () => console.log(`Server started on port ${process.env.PORT}...`))
+
+const authorizeToken = (req, res, next) => {
+    console.log(req.user)
+    res.status(200).json({
+        "ok": true,
+        "message": `Welcome aboard!! ${req.user.displayName}`
     })
-})
+}
 
-app.get('/success', (req, res, nex) => {
-    res.status(200), json({
-        'ok': true,
-        'message': `Welcome ${req.user.email}`
-    })
-})
+app.get('/google', passport.authenticate('google', { session: false, scope: ['email', 'profile'] }));
 
-app.get('/failed', (req, res, next) => {
-    res.status(500), json({
-        'ok': false,
-        'message': 'Connect Failed.'
-    })
-})
-
-app.get('/google', passport.authenticate('google', { scope: ['profile', 'email'] }));
-
-app.get('/google/callback', passport.authenticate('google', { failureRedirect: '/failed' }), (req, res) => {
-    // Successful authentication, redirect home.
-    res.redirect('/success');
-});
-
-app.listen(process.env.PORT, () => console.log(`Server started listening in ${process.env.PORT}`))
+app.get('/google/callback', passport.authenticate('google', { session: false }), authorizeToken);
