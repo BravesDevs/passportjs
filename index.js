@@ -13,20 +13,8 @@ require('dotenv').config()
 const GoogleStrategy = require('passport-google-oauth20').Strategy;
 
 //Middleware
-
+require('./passport')
 app.use(passport.initialize()) // init passport on every route call
-
-const authUser = (request, accessToken, refreshToken, profile, done) => {
-    return done(null, profile);
-}
-
-//Use "GoogleStrategy" as the Authentication Strategy
-passport.use(new GoogleStrategy({
-    clientID: process.env.OAUTH_CLIENT_ID,
-    clientSecret: process.env.OAUTH_CLIENT_SECRET,
-    callbackURL: "http://localhost:3000/google/callback",
-    passReqToCallback: true
-}, authUser));
 
 
 //Start the NODE JS server
